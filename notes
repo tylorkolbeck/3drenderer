@@ -1,0 +1,9 @@
+Compile command:
+
+Compile:
+gcc -Wall -std=c99 src/*.c -o renderer
+Run:
+./renderer
+
+Compile and Run:
+gcc -Wall -std=c99 src/*.c -o renderer && ./renderer
