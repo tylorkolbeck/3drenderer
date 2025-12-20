@@ -11,9 +11,10 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-SDL_Window *window = NULL;
-SDL_GLContext gl_ctx = NULL;
+static SDL_Window *window = NULL;
 static bool running = true;
+static int w = 900;
+static int h = 600;
 
 SDL_AppResult initialize_window(void) {
   if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -22,7 +23,7 @@ SDL_AppResult initialize_window(void) {
   }
 
   // Create a SDL window
-  window = SDL_CreateWindow("Renderer", 600, 600, SDL_WINDOW_OPENGL);
+  window = SDL_CreateWindow("Renderer", w, h, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
   if (!window) {
     std::fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
     SDL_Quit();
@@ -63,11 +64,9 @@ bool setup(void) {
 void update(void) {}
 
 void render(void) {
-  int w, h;
-  SDL_GetWindowSize(window, &w, &h);
   glViewport(0, 0, w, h);
 
-  glClearColor(0.10f, 0.10f, 0.16f, 1.0f);
+  glClearColor(0.196f, 0.2f, 0.302f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
 
   SDL_GL_SwapWindow(window);
@@ -85,6 +84,10 @@ void process_input(void) {
         running = false;
       }
       break;
+    case SDL_EVENT_WINDOW_RESIZED:
+        SDL_GetWindowSize(window, &w, &h);
+        std::printf("WINDOW RESIZE EVENT %i, %i\n", w, h);
+        break;
     }
   }
 }
