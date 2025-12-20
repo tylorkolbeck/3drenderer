@@ -1,0 +1,38 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-Wall",
+      "-Wextra",
+      "-std=c++20",
+      "-O0",
+      "-g",
+      "-Iinclude/glad/include",
+      "-o",
+      "dist/renderer",
+      "src/main.cpp"
+    ],
+    "directory": "/home/tylor/dev/graphics/3drenderer",
+    "file": "/home/tylor/dev/graphics/3drenderer/src/main.cpp",
+    "output": "/home/tylor/dev/graphics/3drenderer/dist/renderer"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-Wall",
+      "-Wextra",
+      "-std=c++20",
+      "-O0",
+      "-g",
+      "-Iinclude/glad/include",
+      "-o",
+      "dist/renderer",
+      "include/glad/src/glad.c"
+    ],
+    "directory": "/home/tylor/dev/graphics/3drenderer",
+    "file": "/home/tylor/dev/graphics/3drenderer/include/glad/src/glad.c",
+    "output": "/home/tylor/dev/graphics/3drenderer/dist/renderer"
+  }
+]

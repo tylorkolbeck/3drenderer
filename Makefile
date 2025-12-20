@@ -1,10 +1,23 @@
-build:
-	gcc -Wall -std=c99 ./src/*.c -lSDL3 -o ./dist/renderer
+CXX      := g++
+CXXFLAGS := -Wall -Wextra -std=c++20 -O0 -g \
+            $(shell pkg-config --cflags sdl3) \
+            -Iinclude/glad/include
 
-run:
-	./dist/renderer
+LDFLAGS  := $(shell pkg-config --libs sdl3) -lGL
 
-all: $(TARGET)
+SRC      := $(wildcard src/*.cpp) include/glad/src/glad.c
+OUT      := dist/renderer
+
+.PHONY: build run clean
+
+build: $(OUT)
+
+$(OUT): $(SRC)
+	mkdir -p dist
+	$(CXX) $(CXXFLAGS) $(SRC) -o $(OUT) $(LDFLAGS)
+
+run: build
+	./$(OUT)
 
 clean:
-	rm ./dist/renderer
+	rm -f $(OUT)
