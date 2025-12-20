@@ -20,21 +20,9 @@ SDL_AppResult initialize_window(void) {
     std::fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
     return SDL_APP_FAILURE;
   }
-  
-
-  // SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-  // SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-  // SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-  // SDL_GL_CONTEXT_PROFILE_CORE);
-
-  // int n = SDL_GetNumRenderDrivers();
-  // SDL_Log("Render drivers available: %d", n);
-  // for (int i = 0; i < n; i++) {
-  //   SDL_Log("  %d: %s", i, SDL_GetRenderDriver(i));
-  // }
 
   // Create a SDL window
-  window = SDL_CreateWindow("Renderer", 600, 600, 0);
+  window = SDL_CreateWindow("Renderer", 600, 600, SDL_WINDOW_OPENGL);
   if (!window) {
     std::fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
     SDL_Quit();
@@ -44,11 +32,46 @@ SDL_AppResult initialize_window(void) {
   return SDL_APP_CONTINUE;
 }
 
-void setup(void) {}
+bool setup(void) {
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+  SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+
+  SDL_GLContext ctx = SDL_GL_CreateContext(window);
+  if (!ctx) {
+    std::fprintf(stderr, "SDL_GL_CreateContext failed: %s\n", SDL_GetError());
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    return false;
+  }
+
+  // Load OpenGL function pointers using SDL's loader
+  if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
+    std::fprintf(stderr, "gladLoadGL failed\n");
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    return 1;
+  }
+
+  SDL_GL_SetSwapInterval(1);
+
+  return true;
+}
 
 void update(void) {}
 
-void render(void) {}
+void render(void) {
+  int w, h;
+  SDL_GetWindowSize(window, &w, &h);
+  glViewport(0, 0, w, h);
+
+  glClearColor(0.10f, 0.10f, 0.16f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT);
+
+  SDL_GL_SwapWindow(window);
+}
 
 void process_input(void) {
   SDL_Event event;
