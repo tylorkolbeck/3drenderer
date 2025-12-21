@@ -6,7 +6,9 @@
 #include <SDL3/SDL_keycode.h>
 #include <SDL3/SDL_oldnames.h>
 #include <SDL3/SDL_render.h>
+#include <SDL3/SDL_timer.h>
 #include <SDL3/SDL_video.h>
+#include <cmath>
 #include <cstdio>
 #include <glad/glad.h>
 #include <stdbool.h>
@@ -26,13 +28,13 @@ Shader *shader = nullptr;
 unsigned int VBO, VAO, EBO;
 
 float vertices[] = {
-    -0.5f, -0.5f, 0.0f,
-     0.5f, -0.5f, 0.0f,
-     0.0f,  0.5f, 0.0f
-}; 
+    // positions         // colors
+    0.5f,  -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom right
+    -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, // bottom left
+    0.0f,  0.5f,  0.0f, 0.0f, 0.0f, 1.0f  // top
+};
 
 unsigned int indices[] = {
-    // note that we start from 0!
     0, 1, 2 // first triangle
 };
 
@@ -79,11 +81,13 @@ bool setup(void) {
 
   SDL_GL_SetSwapInterval(1);
   // Shader setup
-  shader = new Shader("assets/shaders/vertex.glsl", "assets/shaders/fragment.glsl");
+  shader =
+      new Shader("assets/shaders/vertex.glsl", "assets/shaders/fragment.glsl");
 
   glGenVertexArrays(1, &VAO);
   glGenBuffers(1, &VBO);
   glGenBuffers(1, &EBO);
+
   // bind the vao first
   glBindVertexArray(VAO);
 
@@ -94,9 +98,11 @@ bool setup(void) {
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
                GL_STATIC_DRAW);
 
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
-
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
+                        (void *)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
   // unbind the vbo and vao
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
@@ -105,7 +111,6 @@ bool setup(void) {
 }
 
 void update(void) {}
-
 
 void process_input(void) {
   SDL_Event event;
@@ -118,8 +123,10 @@ void process_input(void) {
       if (event.key.key == SDLK_ESCAPE) {
         running = false;
       } else if (event.key.key == SDLK_M) {
-        if (display_mode == 0) display_mode = 1;
-        else if (display_mode == 1) display_mode = 0;
+        if (display_mode == 0)
+          display_mode = 1;
+        else if (display_mode == 1)
+          display_mode = 0;
       }
       break;
     case SDL_EVENT_WINDOW_RESIZED:
@@ -132,12 +139,12 @@ void process_input(void) {
 
 void render(void) {
   glViewport(0, 0, w, h);
-  if (display_mode == 1) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  if (display_mode == 1)
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  else
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
   shader->use();
-  shader->setVec4("triColor", 0.0f, 0.0f, 1.0f, 1.0f);
-
   glClearColor(0.196f, 0.2f, 0.302f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
 
