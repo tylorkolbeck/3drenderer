@@ -19,5 +19,7 @@ $(OUT): $(SRC)
 run: build
 	./$(OUT)
 
+all: clean build run
+
 clean:
 	rm -f $(OUT)

@@ -1,3 +1,4 @@
+#include "shader.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_events.h>
@@ -8,7 +9,6 @@
 #include <SDL3/SDL_video.h>
 #include <cstdio>
 #include <glad/glad.h>
-#include <iostream>
 #include <stdbool.h>
 #include <stdio.h>
 
@@ -20,38 +20,22 @@ static bool running = true;
 static int w = 900;
 static int h = 600;
 static int display_mode = 0;
-unsigned int shaderProgram;
-unsigned int fragmentShader;
-unsigned int vertexShader;
+
+Shader *shader = nullptr;
 
 unsigned int VBO, VAO, EBO;
 
-// shaders
-const char *vertexShaderSource =
-    "#version 330 core\n"
-    "layout (location = 0) in vec3 aPos;\n"
-    "void main() {\n"
-    "	gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-    "}\0";
-
-const char *fragmentShaderSource = "#version 330 core\n"
-                                   "out vec4 FragColor;\n"
-                                   "void main() {\n"
-                                   "FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
-                                   "}\0";
-
-// 2D Triangle
 float vertices[] = {
-    0.5f,  0.5f,  0.0f, // top right
-    0.5f,  -0.5f, 0.0f, // bottom right
-    -0.5f, -0.5f, 0.0f, // bottom left
-    -0.5f, 0.5f,  0.0f  // top left
-};
+    -0.5f, -0.5f, 0.0f,
+     0.5f, -0.5f, 0.0f,
+     0.0f,  0.5f, 0.0f
+}; 
+
 unsigned int indices[] = {
     // note that we start from 0!
-    0, 1, 3, // first triangle
-    1, 2, 3  // second triangle
+    0, 1, 2 // first triangle
 };
+
 SDL_AppResult initialize_window(void) {
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     std::fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
@@ -94,9 +78,8 @@ bool setup(void) {
   }
 
   SDL_GL_SetSwapInterval(1);
-
-  compileShaders();
-  linkShaders();
+  // Shader setup
+  shader = new Shader("assets/shaders/vertex.glsl", "assets/shaders/fragment.glsl");
 
   glGenVertexArrays(1, &VAO);
   glGenBuffers(1, &VBO);
@@ -118,71 +101,11 @@ bool setup(void) {
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
 
-  glUseProgram(shaderProgram);
   return true;
 }
 
 void update(void) {}
 
-void render(void) {
-  glViewport(0, 0, w, h);
-  if (display_mode == 1) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-  glClearColor(0.196f, 0.2f, 0.302f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT);
-
-  glBindVertexArray(VAO);
-  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-  // glDrawArrays(GL_TRIANGLES, 0, 3);
-  SDL_GL_SwapWindow(window);
-}
-
-void compileShaders() {
-  vertexShader = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-  glCompileShader(vertexShader);
-
-  int success;
-  char infoLog[512];
-  glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-  if (!success) {
-    glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-    std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n"
-              << infoLog << std::endl;
-  }
-  std::cout << "INFO::SHADER::VERTEX::COMPILATION_SUCCESS\n";
-
-  fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-  glCompileShader(fragmentShader);
-
-  glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-  if (!success) {
-    glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-    std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n"
-              << infoLog << std::endl;
-  }
-  std::cout << "INFO::SHADER::FRAGMENT::COMPILATION_SUCCESS\n";
-}
-
-void linkShaders() {
-  shaderProgram = glCreateProgram();
-  glAttachShader(shaderProgram, vertexShader);
-  glAttachShader(shaderProgram, fragmentShader);
-  glLinkProgram(shaderProgram);
-  int success;
-  char infoLog[512];
-  glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-  if (!success) {
-    glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-    std::cout << "ERROR::SHADER_LINKER::LINK_FAILED\n" << infoLog << std::endl;
-  } else {
-    std::cout << "INFO::SHADER_LINKER::LINK_SUCCESS" << std::endl;
-  }
-
-  glDeleteShader(vertexShader);
-  glDeleteShader(fragmentShader);
-}
 
 void process_input(void) {
   SDL_Event event;
@@ -207,6 +130,21 @@ void process_input(void) {
   }
 }
 
+void render(void) {
+  glViewport(0, 0, w, h);
+  if (display_mode == 1) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  else glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+  shader->use();
+  shader->setVec4("triColor", 0.0f, 0.0f, 1.0f, 1.0f);
+
+  glClearColor(0.196f, 0.2f, 0.302f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT);
+
+  glBindVertexArray(VAO);
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+  SDL_GL_SwapWindow(window);
+}
 int main(void) {
   if (initialize_window() != SDL_APP_CONTINUE) {
     return 1;
