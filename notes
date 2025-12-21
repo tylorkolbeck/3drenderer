@@ -7,3 +7,6 @@ Run:
 
 Compile and Run:
 gcc -Wall -std=c99 src/*.c -o renderer && ./renderer
+
+Generate compile commands:
+bear -- make clean build

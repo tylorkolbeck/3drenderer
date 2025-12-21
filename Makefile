@@ -1,7 +1,8 @@
 CXX      := g++
 CXXFLAGS := -Wall -Wextra -std=c++20 -O0 -g \
             $(shell pkg-config --cflags sdl3) \
-            -Iinclude/glad/include
+            -Iinclude/glad/include \
+			-Iinclude/stb/include
 
 LDFLAGS  := $(shell pkg-config --libs sdl3) -lGL
 

@@ -9,6 +9,7 @@
       "-O0",
       "-g",
       "-Iinclude/glad/include",
+      "-Iinclude/stb/include",
       "-o",
       "dist/renderer",
       "src/main.cpp"
@@ -27,6 +28,7 @@
       "-O0",
       "-g",
       "-Iinclude/glad/include",
+      "-Iinclude/stb/include",
       "-o",
       "dist/renderer",
       "include/glad/src/glad.c"

@@ -1,4 +1,6 @@
 #include "shader.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "texture.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_events.h>
@@ -8,7 +10,6 @@
 #include <SDL3/SDL_render.h>
 #include <SDL3/SDL_timer.h>
 #include <SDL3/SDL_video.h>
-#include <cmath>
 #include <cstdio>
 #include <glad/glad.h>
 #include <stdbool.h>
@@ -24,19 +25,24 @@ static int h = 600;
 static int display_mode = 0;
 
 Shader *shader = nullptr;
+Texture *texture = nullptr;
 
 unsigned int VBO, VAO, EBO;
 
 float vertices[] = {
-    // positions         // colors
-    0.5f,  -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom right
-    -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, // bottom left
-    0.0f,  0.5f,  0.0f, 0.0f, 0.0f, 1.0f  // top
+    // positions          // colors           // texture coords
+    0.5f,  0.5f,  0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // top right
+    0.5f,  -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom right
+    -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // bottom left
+    -0.5f, 0.5f,  0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f  // top left
 };
 
-unsigned int indices[] = {
-    0, 1, 2 // first triangle
-};
+unsigned int indices[] = {  // note that we start from 0!
+    0, 1, 3,   // first triangle
+    1, 2, 3    // second triangle
+};  
+
+unsigned char *textureData;
 
 SDL_AppResult initialize_window(void) {
   if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -83,6 +89,8 @@ bool setup(void) {
   // Shader setup
   shader =
       new Shader("assets/shaders/vertex.glsl", "assets/shaders/fragment.glsl");
+  texture = new Texture("assets/textures/container.jpg");
+  texture->init();
 
   glGenVertexArrays(1, &VAO);
   glGenBuffers(1, &VBO);
@@ -98,11 +106,14 @@ bool setup(void) {
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
                GL_STATIC_DRAW);
 
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void *)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float),
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
                         (void *)(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
+  glEnableVertexAttribArray(2);
+
   // unbind the vbo and vao
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
@@ -145,6 +156,7 @@ void render(void) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
   shader->use();
+  // texture->bind();
   glClearColor(0.196f, 0.2f, 0.302f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
 
