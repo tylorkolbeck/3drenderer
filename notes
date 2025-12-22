@@ -10,3 +10,224 @@ gcc -Wall -std=c99 src/*.c -o renderer && ./renderer
 
 Generate compile commands:
 bear -- make clean build
+
+
+
+
+
+This is an **excellent question** — and the fact you’re asking it means you’re already thinking like a systems programmer.
+
+The short answer is:
+👉 **structure ownership + make invalid states unrepresentable**.
+
+Let’s turn this bug into a checklist you can reuse forever.
+
+---
+
+## 1️⃣ Give each function **one job** (and one side-effect)
+
+Your crash happened because:
+
+* `loadTexture()` **both loaded data AND triggered GPU upload**
+* `generateTextures()` **both uploaded AND freed memory**
+
+That made call order fragile.
+
+### Rule to follow
+
+> A function should either **acquire**, **use**, or **release** a resource — not more than one.
+
+### Better separation (mental model)
+
+```text
+load()        → allocates CPU memory
+upload()      → consumes CPU memory
+free()        → releases CPU memory
+```
+
+Even if they live in one function, **think this way**.
+
+---
+
+## 2️⃣ Encode ownership in the type system (RAII)
+
+Raw pointers are easy to double-free.
+
+Instead of:
+
+```cpp
+unsigned char* textureData;
+```
+
+Prefer:
+
+```cpp
+std::unique_ptr<unsigned char, void(*)(void*)> textureData;
+```
+
+Example:
+
+```cpp
+using StbiPtr = std::unique_ptr<unsigned char, void(*)(void*)>;
+
+StbiPtr textureData{nullptr, stbi_image_free};
+```
+
+Now:
+
+* Memory is freed **exactly once**
+* Accidental double-free becomes impossible
+* You can’t forget to free it
+
+This is *huge* for safety.
+
+---
+
+## 3️⃣ Make “used already” state explicit
+
+After you upload to the GPU, the CPU copy is no longer valid.
+
+### Enforce that in code
+
+```cpp
+void Texture::generateTextures() {
+  assert(textureData && "Texture data already freed or not loaded");
+
+  ...
+  stbi_image_free(textureData);
+  textureData = nullptr;
+}
+```
+
+Now mistakes crash **immediately**, not mysteriously later.
+
+---
+
+## 4️⃣ Never call side-effect functions from constructors *and* helpers
+
+Constructors should:
+
+* Orchestrate
+* Not hide work in helpers
+
+### Bad (what caused this bug)
+
+```cpp
+loadTexture();   // secretly uploads + frees
+generateTextures();
+```
+
+### Good
+
+```cpp
+loadTexture();
+uploadToGPU();
+```
+
+If something allocates or frees memory:
+👉 **name it so**.
+
+---
+
+## 5️⃣ Follow the “consume-once” rule
+
+If a function *consumes* a pointer, it should **invalidate it**.
+
+### Pattern
+
+```cpp
+void uploadAndFree(unsigned char*& data) {
+  ...
+  stbi_image_free(data);
+  data = nullptr;
+}
+```
+
+This makes misuse impossible unless someone ignores the pointer state.
+
+---
+
+## 6️⃣ Turn on tools that catch this instantly
+
+### AddressSanitizer (always use during development)
+
+```bash
+-fsanitize=address -fno-omit-frame-pointer -g
+```
+
+This bug would have been caught **the moment it happened**, not later.
+
+---
+
+## 7️⃣ Write “defensive invariants” (cheap, powerful)
+
+Add invariants at boundaries:
+
+```cpp
+void Texture::generateTextures() {
+  if (!textureData) {
+    throw std::logic_error("generateTextures called without textureData");
+  }
+}
+```
+
+You want bugs to:
+
+* fail fast
+* fail loud
+* fail close to the cause
+
+---
+
+## 8️⃣ Adopt a mental checklist (memorize this)
+
+Before freeing memory, ask:
+
+* ❓ Who allocated this?
+* ❓ Who owns it now?
+* ❓ Is this function allowed to free it?
+* ❓ Can this function be called twice?
+
+If any answer is unclear → redesign.
+
+---
+
+## 🏆 Gold-standard version (idiomatic C++)
+
+```cpp
+void Texture::loadTexture() {
+  int w, h, ch;
+  StbiPtr data(stbi_load(file, &w, &h, &ch, 0), stbi_image_free);
+  if (!data) throw std::runtime_error("Failed to load texture");
+
+  uploadToGPU(data.get(), w, h, ch);
+}
+```
+
+Notice:
+
+* No raw ownership stored
+* No class-level pointer
+* Impossible to double-free
+
+---
+
+## TL;DR (print this)
+
+To avoid this forever:
+
+1. One function = one responsibility
+2. Use RAII (`unique_ptr`)
+3. Null pointers after free
+4. Assert invariants
+5. Don’t hide frees in helpers
+6. Use ASan always
+7. Make ownership obvious in names
+
+If you want, next I can:
+
+* refactor your texture class into a **bulletproof RAII version**
+* show a **minimal OpenGL texture loader pattern**
+* teach you how to design APIs that *prevent* misuse
+* map these ideas to **C**, **Rust**, or **Go** patterns
+

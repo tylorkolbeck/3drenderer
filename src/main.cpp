@@ -1,5 +1,5 @@
-#include "shader.h"
 #define STB_IMAGE_IMPLEMENTATION
+#include "shader.h"
 #include "texture.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_error.h>
@@ -25,7 +25,8 @@ static int h = 600;
 static int display_mode = 0;
 
 Shader *shader = nullptr;
-Texture *texture = nullptr;
+Texture *texture1 = nullptr;
+Texture *texture2 = nullptr;
 
 unsigned int VBO, VAO, EBO;
 
@@ -37,10 +38,11 @@ float vertices[] = {
     -0.5f, 0.5f,  0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f  // top left
 };
 
-unsigned int indices[] = {  // note that we start from 0!
-    0, 1, 3,   // first triangle
-    1, 2, 3    // second triangle
-};  
+unsigned int indices[] = {
+    // note that we start from 0!
+    0, 1, 3, // first triangle
+    1, 2, 3  // second triangle
+};
 
 unsigned char *textureData;
 
@@ -89,8 +91,11 @@ bool setup(void) {
   // Shader setup
   shader =
       new Shader("assets/shaders/vertex.glsl", "assets/shaders/fragment.glsl");
-  texture = new Texture("assets/textures/container.jpg");
-  texture->init();
+  texture1 = new Texture("assets/textures/container.jpg");
+  texture1->init();
+  texture2 = new Texture("assets/textures/awesomeface.png");
+  texture2->init();
+
 
   glGenVertexArrays(1, &VAO);
   glGenBuffers(1, &VBO);
@@ -111,12 +116,17 @@ bool setup(void) {
   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
                         (void *)(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
-  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+                        (void *)(6 * sizeof(float)));
   glEnableVertexAttribArray(2);
 
-  // unbind the vbo and vao
+  // unbind the VBO and VAO
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
+
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA,
+              GL_ONE_MINUS_SRC_ALPHA); // Common for standard alpha blending
 
   return true;
 }
@@ -155,8 +165,12 @@ void render(void) {
   else
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+
   shader->use();
-  // texture->bind();
+  texture1->bind();
+  shader->setInt("texture1", 0);
+  texture2->bind();
+  shader->setInt("texture2", 1);
   glClearColor(0.196f, 0.2f, 0.302f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
 
