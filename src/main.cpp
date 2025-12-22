@@ -13,12 +13,12 @@
 #include <cstdio>
 #include <glad/glad.h>
 #include <stdbool.h>
-#include <stdio.h>
+#include "window_impl.h"
 
 void compileShaders();
 void linkShaders();
 
-static SDL_Window *window = NULL;
+// static SDL_Window *window = NULL;
 static bool running = true;
 static int w = 900;
 static int h = 600;
@@ -27,6 +27,8 @@ static int display_mode = 0;
 Shader *shader = nullptr;
 Texture *texture1 = nullptr;
 Texture *texture2 = nullptr;
+
+Window *window = nullptr;
 
 unsigned int VBO, VAO, EBO;
 
@@ -46,24 +48,6 @@ unsigned int indices[] = {
 
 unsigned char *textureData;
 
-SDL_AppResult initialize_window(void) {
-  if (!SDL_Init(SDL_INIT_VIDEO)) {
-    std::fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
-    return SDL_APP_FAILURE;
-  }
-
-  // Create a SDL window
-  window = SDL_CreateWindow("Renderer", w, h,
-                            SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-  if (!window) {
-    std::fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
-    SDL_Quit();
-    return SDL_APP_FAILURE;
-  }
-
-  return SDL_APP_CONTINUE;
-}
-
 bool setup(void) {
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
@@ -71,10 +55,10 @@ bool setup(void) {
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
-  SDL_GLContext ctx = SDL_GL_CreateContext(window);
+  SDL_GLContext ctx = SDL_GL_CreateContext(window->window());
   if (!ctx) {
     std::fprintf(stderr, "SDL_GL_CreateContext failed: %s\n", SDL_GetError());
-    SDL_DestroyWindow(window);
+    window->destroy();
     SDL_Quit();
     return false;
   }
@@ -82,7 +66,7 @@ bool setup(void) {
   // Load OpenGL function pointers using SDL's loader
   if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
     std::fprintf(stderr, "gladLoadGL failed\n");
-    SDL_DestroyWindow(window);
+    window->destroy();
     SDL_Quit();
     return 1;
   }
@@ -101,7 +85,7 @@ bool setup(void) {
   glGenBuffers(1, &VBO);
   glGenBuffers(1, &EBO);
 
-  // bind the vao first
+  // bind the VAO first
   glBindVertexArray(VAO);
 
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -151,7 +135,7 @@ void process_input(void) {
       }
       break;
     case SDL_EVENT_WINDOW_RESIZED:
-      SDL_GetWindowSize(window, &w, &h);
+      SDL_GetWindowSize(window->window(), &w, &h);
       std::printf("WINDOW RESIZE EVENT %i, %i\n", w, h);
       break;
     }
@@ -176,10 +160,11 @@ void render(void) {
 
   glBindVertexArray(VAO);
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-  SDL_GL_SwapWindow(window);
+  window->render();
 }
 int main(void) {
-  if (initialize_window() != SDL_APP_CONTINUE) {
+  window = new Window();
+  if (!window->init()) {
     return 1;
   }
 
@@ -190,7 +175,7 @@ int main(void) {
     update();
     render();
   }
-  SDL_DestroyWindow(window);
+  window->destroy();
   SDL_Quit();
 
   return 0;

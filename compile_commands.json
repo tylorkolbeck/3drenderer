@@ -10,6 +10,71 @@
       "-g",
       "-Iinclude/glad/include",
       "-Iinclude/stb/include",
+      "-Isrc",
+      "-Isrc/lib",
+      "-o",
+      "dist/renderer",
+      "src/lib/stb_image_impl.cpp"
+    ],
+    "directory": "/home/tylor/dev/graphics/3drenderer",
+    "file": "/home/tylor/dev/graphics/3drenderer/src/lib/stb_image_impl.cpp",
+    "output": "/home/tylor/dev/graphics/3drenderer/dist/renderer"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-Wall",
+      "-Wextra",
+      "-std=c++20",
+      "-O0",
+      "-g",
+      "-Iinclude/glad/include",
+      "-Iinclude/stb/include",
+      "-Isrc",
+      "-Isrc/lib",
+      "-o",
+      "dist/renderer",
+      "src/lib/window_impl.cpp"
+    ],
+    "directory": "/home/tylor/dev/graphics/3drenderer",
+    "file": "/home/tylor/dev/graphics/3drenderer/src/lib/window_impl.cpp",
+    "output": "/home/tylor/dev/graphics/3drenderer/dist/renderer"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-Wall",
+      "-Wextra",
+      "-std=c++20",
+      "-O0",
+      "-g",
+      "-Iinclude/glad/include",
+      "-Iinclude/stb/include",
+      "-Isrc",
+      "-Isrc/lib",
+      "-o",
+      "dist/renderer",
+      "src/texture.cpp"
+    ],
+    "directory": "/home/tylor/dev/graphics/3drenderer",
+    "file": "/home/tylor/dev/graphics/3drenderer/src/texture.cpp",
+    "output": "/home/tylor/dev/graphics/3drenderer/dist/renderer"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-Wall",
+      "-Wextra",
+      "-std=c++20",
+      "-O0",
+      "-g",
+      "-Iinclude/glad/include",
+      "-Iinclude/stb/include",
+      "-Isrc",
+      "-Isrc/lib",
       "-o",
       "dist/renderer",
       "src/main.cpp"
@@ -29,6 +94,8 @@
       "-g",
       "-Iinclude/glad/include",
       "-Iinclude/stb/include",
+      "-Isrc",
+      "-Isrc/lib",
       "-o",
       "dist/renderer",
       "include/glad/src/glad.c"

@@ -2,11 +2,14 @@ CXX      := g++
 CXXFLAGS := -Wall -Wextra -std=c++20 -O0 -g \
             $(shell pkg-config --cflags sdl3) \
             -Iinclude/glad/include \
-			-Iinclude/stb/include
+			-Iinclude/stb/include \
+			-Isrc -Isrc/lib
 
 LDFLAGS  := $(shell pkg-config --libs sdl3) -lGL
-
-SRC      := $(wildcard src/*.cpp) include/glad/src/glad.c
+SRC := $(shell find src -type f -name '*.cpp') include/glad/src/glad.c
+# SRC      := $(wildcard src/*.cpp)  \
+# 			$(wildcard src/lib/*.cpp) \
+# 			include/glad/src/glad.c
 OUT      := dist/renderer
 
 .PHONY: build run clean
