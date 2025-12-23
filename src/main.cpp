@@ -1,3 +1,4 @@
+#include "camera/camera.h"
 #include "glm/ext/matrix_transform.hpp"
 #include <memory>
 #define STB_IMAGE_IMPLEMENTATION
@@ -34,8 +35,18 @@ Shader *shader = nullptr;
 Texture *texture1 = nullptr;
 Texture *texture2 = nullptr;
 std::unique_ptr<Window> window;
+std::unique_ptr<Camera> camera;
 
 bool showDemo = true;
+
+struct InputState {
+  bool w = false;
+  bool a = false;
+  bool s = false;
+  bool d = false;
+};
+
+InputState input;
 
 // Fake camera settings
 float fov = 45.0f;
@@ -131,7 +142,16 @@ bool setup(void) {
   return true;
 }
 
-void update(void) {}
+void update(void) {
+  if (input.w)
+    camera->forward();
+  if (input.s)
+    camera->back();
+  if (input.a)
+    camera->left();
+  if (input.d)
+    camera->right();
+}
 
 void process_input(void) {
   SDL_Event event;
@@ -143,94 +163,112 @@ void process_input(void) {
       running = false;
       break;
     case SDL_EVENT_KEY_DOWN:
+      if (event.key.repeat)
+        break; // optional: ignore OS repeat
+      if (event.key.key == SDLK_W)
+        input.w = true;
+      if (event.key.key == SDLK_S)
+        input.s = true;
+      if (event.key.key == SDLK_A)
+        input.a = true;
+      if (event.key.key == SDLK_D)
+        input.d = true;
       if (event.key.key == SDLK_ESCAPE) {
         running = false;
-      } else if (event.key.key == SDLK_M) {
-        if (display_mode == 0) {
-          display_mode = 1;
-          glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        } else if (display_mode == 1) {
-          display_mode = 0;
-          glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        }
-      } else if (event.key.key == SDLK_P) {
-        fov += 1;
-      } else if (event.key.key == SDLK_O) {
-        fov -= 1;
       }
+      if (event.key.key == SDLK_M) {
+          if (display_mode == 0) {
+            display_mode = 1;
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+          } else {
+            display_mode = 0;
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+          }
+        }
       break;
-    case SDL_EVENT_WINDOW_RESIZED:
-      int w, h;
-      SDL_GetWindowSize(window->handle(), &w, &h);
-      window->setSize(w, h);
-      glViewport(0, 0, window->width(), window->height());
-      std::printf("WINDOW RESIZE EVENT %i, %i\n", w, h);
+
+    case SDL_EVENT_KEY_UP:
+      if (event.key.key == SDLK_W)
+        input.w = false;
+      if (event.key.key == SDLK_S)
+        input.s = false;
+      if (event.key.key == SDLK_A)
+        input.a = false;
+      if (event.key.key == SDLK_D)
+        input.d = false;
       break;
+      case SDL_EVENT_WINDOW_RESIZED:
+        int w, h;
+        SDL_GetWindowSize(window->handle(), &w, &h);
+        window->setSize(w, h);
+        glViewport(0, 0, window->width(), window->height());
+        std::printf("WINDOW RESIZE EVENT %i, %i\n", w, h);
+        break;
+      }
     }
   }
-}
 
-void render(void) {
-  glClearColor(0.129f, 0.129f, 0.129f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  // START IMGUI FRAME
-  ImGui_ImplOpenGL3_NewFrame();
-  ImGui_ImplSDL3_NewFrame();
-  ImGui::NewFrame();
-  ImGui::ShowDemoWindow(&showDemo);
+  void render(void) {
+    glClearColor(0.129f, 0.129f, 0.129f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // START IMGUI FRAME
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
+    ImGui::ShowDemoWindow(&showDemo);
 
-  shader->use();
-  shader->setInt("texture1", 0);
-  shader->setInt("texture2", 1);
+    shader->use();
+    shader->setInt("texture1", 0);
+    shader->setInt("texture2", 1);
 
-  texture1->bind();
-  texture2->bind();
+    texture1->bind();
+    texture2->bind();
 
-  glm::mat4 proj =
-      glm::perspective(glm::radians(fov), window->aspect(), 0.1f, 100.0f);
+    glm::mat4 proj =
+        glm::perspective(glm::radians(fov), window->aspect(), 0.1f, 100.0f);
 
-  glm::mat4 view = glm::mat4(1.0f);
-  view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+    shader->setMat4("view", camera->view());
+    shader->setMat4("proj", proj);
 
-  shader->setMat4("view", view);
-  shader->setMat4("proj", proj);
+    glBindVertexArray(VAO);
+    for (unsigned int i = 0; i < 10; i++) {
+      glm::mat4 model = glm::mat4(1.0f);
+      model = glm::translate(model, cubePositions[i]);
+      float angle = window->time() * 5 * i;
+      model =
+          glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+      shader->setMat4("model", model);
+      glDrawArrays(GL_TRIANGLES, 0, 36);
+    }
 
-  glBindVertexArray(VAO);
-  for (unsigned int i = 0; i < 10; i++) {
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, cubePositions[i]);
-    float angle = window->time() * 5 * i;
-    model =
-        glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-    shader->setMat4("model", model);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
+    // RENDER IMGUI FRAME
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    // SWAP THE FRONT AND BACK BUFFER
+    SDL_GL_SwapWindow(window->handle());
   }
+  int main(void) {
+    window = std::make_unique<Window>();
+    camera = std::make_unique<Camera>(glm::vec3(0.0f, 0.0f, 3.0f),
+                                      glm::vec3(0.0f, 0.0f, -1.0f));
 
-  // RENDER IMGUI FRAME
-  ImGui::Render();
-  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    if (!window->init()) {
+      return 1;
+    }
 
-  // SWAP THE FRONT AND BACK BUFFER
-  SDL_GL_SwapWindow(window->handle());
-}
-int main(void) {
-  window = std::make_unique<Window>();
-  if (!window->init()) {
-    return 1;
+    setup();
+
+    while (running) {
+      process_input();
+      update();
+      render();
+    }
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplSDL3_Shutdown();
+    ImGui::DestroyContext();
+
+    SDL_Quit();
+
+    return 0;
   }
-
-  setup();
-
-  while (running) {
-    process_input();
-    update();
-    render();
-  }
-  ImGui_ImplOpenGL3_Shutdown();
-  ImGui_ImplSDL3_Shutdown();
-  ImGui::DestroyContext();
-
-  SDL_Quit();
-
-  return 0;
-}
