@@ -7,16 +7,19 @@ public:
   ~Window();
   bool init();
   void destroy();
-  SDL_Window *window();
+  SDL_Window *handle();
   int width();
   int height();
   void setSize(int w, int h);
   void setAspect();
   float aspect();
+  SDL_GLContext glContext();
+  float time();
 
 private:
   int w;
   int h;
   float _aspect;
-  SDL_Window *sdl_window;
+  SDL_GLContext sdl_ctx;
+  SDL_Window *sdl_window = nullptr;
 };

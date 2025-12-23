@@ -1,8 +1,9 @@
 #include "glm/ext/matrix_transform.hpp"
+#include <memory>
 #define STB_IMAGE_IMPLEMENTATION
 #include "shader.h"
 #include "texture.h"
-#include "window_impl.h"
+#include "window_sdl_impl.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_events.h>
@@ -32,8 +33,7 @@ static int display_mode = 0;
 Shader *shader = nullptr;
 Texture *texture1 = nullptr;
 Texture *texture2 = nullptr;
-
-Window *window = nullptr;
+std::unique_ptr<Window> window;
 
 bool showDemo = true;
 
@@ -73,33 +73,13 @@ glm::vec3 cubePositions[] = {
     glm::vec3(2.4f, -0.4f, -3.5f),  glm::vec3(-1.7f, 3.0f, -7.5f),
     glm::vec3(1.3f, -2.0f, -2.5f),  glm::vec3(1.5f, 2.0f, -2.5f),
     glm::vec3(1.5f, 0.2f, -1.5f),   glm::vec3(-1.3f, 1.0f, -1.5f)};
-// unsigned int indices[] = {
-//     // note that we start from 0!
-//     0, 1, 3, // first triangle
-//     1, 2, 3  // second triangle
-// };
 
 unsigned char *textureData;
 
 bool setup(void) {
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-  SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-
-  SDL_GLContext ctx = SDL_GL_CreateContext(window->window());
-  if (!ctx) {
-    std::fprintf(stderr, "SDL_GL_CreateContext failed: %s\n", SDL_GetError());
-    window->destroy();
-    SDL_Quit();
-    return false;
-  }
-
   // Load OpenGL function pointers using SDL's loader
   if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
     std::fprintf(stderr, "gladLoadGL failed\n");
-    window->destroy();
     SDL_Quit();
     return 1;
   }
@@ -108,12 +88,11 @@ bool setup(void) {
   ImGui::CreateContext();
   ImGui::StyleColorsDark();
 
-  ImGui_ImplSDL3_InitForOpenGL(window->window(), &ctx);
+  ImGui_ImplSDL3_InitForOpenGL(window->handle(), window->glContext());
   ImGui_ImplOpenGL3_Init("#version 330");
 
   glEnable(GL_DEPTH_TEST);
 
-  SDL_GL_SetSwapInterval(1);
   // Shader setup
   shader =
       new Shader("assets/shaders/vertex.glsl", "assets/shaders/fragment.glsl");
@@ -132,10 +111,6 @@ bool setup(void) {
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-  // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-  // glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
-  //              GL_STATIC_DRAW);
-
   // Vertice mapping
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
@@ -144,11 +119,6 @@ bool setup(void) {
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
                         (void *)(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
-
-  // Texture mapping
-  // glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-  //                       (void *)(6 * sizeof(float)));
-  // glEnableVertexAttribArray(2);
 
   // unbind the VBO and VAO
   glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -191,18 +161,13 @@ void process_input(void) {
       break;
     case SDL_EVENT_WINDOW_RESIZED:
       int w, h;
-      SDL_GetWindowSize(window->window(), &w, &h);
+      SDL_GetWindowSize(window->handle(), &w, &h);
       window->setSize(w, h);
       glViewport(0, 0, window->width(), window->height());
       std::printf("WINDOW RESIZE EVENT %i, %i\n", w, h);
       break;
     }
   }
-}
-
-float getTime() {
-  return (float)SDL_GetPerformanceCounter() /
-         (double)SDL_GetPerformanceFrequency();
 }
 
 void render(void) {
@@ -212,10 +177,6 @@ void render(void) {
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplSDL3_NewFrame();
   ImGui::NewFrame();
-  // BUILD IMGUI UI
-  // ImGui::Begin("Debug");
-  // ImGui::Text("Hello ImGui");
-  // ImGui::End();
   ImGui::ShowDemoWindow(&showDemo);
 
   shader->use();
@@ -238,22 +199,22 @@ void render(void) {
   for (unsigned int i = 0; i < 10; i++) {
     glm::mat4 model = glm::mat4(1.0f);
     model = glm::translate(model, cubePositions[i]);
-    float angle = getTime() * 5 * i;
+    float angle = window->time() * 5 * i;
     model =
         glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
     shader->setMat4("model", model);
     glDrawArrays(GL_TRIANGLES, 0, 36);
   }
-  
+
   // RENDER IMGUI FRAME
   ImGui::Render();
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
   // SWAP THE FRONT AND BACK BUFFER
-  SDL_GL_SwapWindow(window->window());
+  SDL_GL_SwapWindow(window->handle());
 }
 int main(void) {
-  window = new Window();
+  window = std::make_unique<Window>();
   if (!window->init()) {
     return 1;
   }
@@ -268,7 +229,7 @@ int main(void) {
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplSDL3_Shutdown();
   ImGui::DestroyContext();
-  window->destroy();
+
   SDL_Quit();
 
   return 0;
