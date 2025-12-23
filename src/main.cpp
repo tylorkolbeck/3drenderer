@@ -1,6 +1,5 @@
 #include "glm/ext/matrix_transform.hpp"
 #define STB_IMAGE_IMPLEMENTATION
-#include "random.h"
 #include "shader.h"
 #include "texture.h"
 #include "window_impl.h"
@@ -35,6 +34,8 @@ Texture *texture1 = nullptr;
 Texture *texture2 = nullptr;
 
 Window *window = nullptr;
+
+bool showDemo = true;
 
 // Fake camera settings
 float fov = 45.0f;
@@ -165,6 +166,7 @@ void update(void) {}
 void process_input(void) {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
+    // Let IMGUI HANDLE THE EVENT AS WELL
     ImGui_ImplSDL3_ProcessEvent(&event);
     switch (event.type) {
     case SDL_EVENT_QUIT:
@@ -206,15 +208,15 @@ float getTime() {
 void render(void) {
   glClearColor(0.129f, 0.129f, 0.129f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+  // START IMGUI FRAME
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplSDL3_NewFrame();
   ImGui::NewFrame();
-
-  ImGui::Begin("Debug");
-  ImGui::Text("Hello ImGui");
-  ImGui::End();
-
+  // BUILD IMGUI UI
+  // ImGui::Begin("Debug");
+  // ImGui::Text("Hello ImGui");
+  // ImGui::End();
+  ImGui::ShowDemoWindow(&showDemo);
 
   shader->use();
   shader->setInt("texture1", 0);
@@ -243,10 +245,11 @@ void render(void) {
     glDrawArrays(GL_TRIANGLES, 0, 36);
   }
   
-
+  // RENDER IMGUI FRAME
   ImGui::Render();
-
   ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+  // SWAP THE FRONT AND BACK BUFFER
   SDL_GL_SwapWindow(window->window());
 }
 int main(void) {
