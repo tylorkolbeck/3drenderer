@@ -1,7 +1,7 @@
 #include "glm/ext/matrix_transform.hpp"
 #define STB_IMAGE_IMPLEMENTATION
-#include "shader.h"
 #include "random.h"
+#include "shader.h"
 #include "texture.h"
 #include "window_impl.h"
 #include <SDL3/SDL.h>
@@ -13,11 +13,14 @@
 #include <SDL3/SDL_render.h>
 #include <SDL3/SDL_timer.h>
 #include <SDL3/SDL_video.h>
+#include <backends/imgui_impl_opengl3.h>
+#include <backends/imgui_impl_sdl3.h>
 #include <cstdio>
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <imgui.h>
 #include <stdbool.h>
 
 void compileShaders();
@@ -64,7 +67,7 @@ float vertices[] = {
     -0.5f, 0.5f,  0.5f,  0.0f, 0.0f, -0.5f, 0.5f,  -0.5f, 0.0f, 1.0f};
 
 glm::vec3 cubePositions[] = {
-    glm::vec3(0.0f, 0.0f, -2.0f),    glm::vec3(2.0f, 5.0f, -15.0f),
+    glm::vec3(0.0f, 0.0f, -2.0f),   glm::vec3(2.0f, 5.0f, -15.0f),
     glm::vec3(-1.5f, -2.2f, -2.5f), glm::vec3(-3.8f, -2.0f, -12.3f),
     glm::vec3(2.4f, -0.4f, -3.5f),  glm::vec3(-1.7f, 3.0f, -7.5f),
     glm::vec3(1.3f, -2.0f, -2.5f),  glm::vec3(1.5f, 2.0f, -2.5f),
@@ -99,6 +102,13 @@ bool setup(void) {
     SDL_Quit();
     return 1;
   }
+
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGui::StyleColorsDark();
+
+  ImGui_ImplSDL3_InitForOpenGL(window->window(), &ctx);
+  ImGui_ImplOpenGL3_Init("#version 330");
 
   glEnable(GL_DEPTH_TEST);
 
@@ -155,6 +165,7 @@ void update(void) {}
 void process_input(void) {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
+    ImGui_ImplSDL3_ProcessEvent(&event);
     switch (event.type) {
     case SDL_EVENT_QUIT:
       running = false;
@@ -196,6 +207,15 @@ void render(void) {
   glClearColor(0.129f, 0.129f, 0.129f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+  ImGui_ImplOpenGL3_NewFrame();
+  ImGui_ImplSDL3_NewFrame();
+  ImGui::NewFrame();
+
+  ImGui::Begin("Debug");
+  ImGui::Text("Hello ImGui");
+  ImGui::End();
+
+
   shader->use();
   shader->setInt("texture1", 0);
   shader->setInt("texture2", 1);
@@ -222,8 +242,12 @@ void render(void) {
     shader->setMat4("model", model);
     glDrawArrays(GL_TRIANGLES, 0, 36);
   }
+  
 
-  window->render();
+  ImGui::Render();
+
+  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+  SDL_GL_SwapWindow(window->window());
 }
 int main(void) {
   window = new Window();
@@ -238,6 +262,9 @@ int main(void) {
     update();
     render();
   }
+  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplSDL3_Shutdown();
+  ImGui::DestroyContext();
   window->destroy();
   SDL_Quit();
 

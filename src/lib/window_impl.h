@@ -7,9 +7,7 @@ public:
   ~Window();
   bool init();
   void destroy();
-  void swapBuffer();
   SDL_Window *window();
-  void render();
   int width();
   int height();
   void setSize(int w, int h);

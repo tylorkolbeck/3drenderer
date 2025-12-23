@@ -35,14 +35,11 @@ void Window::setSize(int w, int h) {
   this->h = h;
   setAspect();
 }
-void Window::render() { SDL_GL_SwapWindow(sdl_window); }
 
 void Window::destroy() { SDL_DestroyWindow(sdl_window); }
 
 int Window::width() { return w; }
 
 int Window::height() { return h; }
-
-void Window::swapBuffer() { SDL_GL_SwapWindow(sdl_window); }
 
 SDL_Window *Window::window() { return sdl_window; }
