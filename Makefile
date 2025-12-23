@@ -3,7 +3,8 @@ CXXFLAGS := -Wall -Wextra -std=c++20 -O0 -g \
             $(shell pkg-config --cflags sdl3) \
             -Iinclude/glad/include \
 			-Iinclude/stb/include \
-			-Isrc -Isrc/lib
+			-Isrc -Isrc/lib \
+			-Iinclude/glm
 
 LDFLAGS  := $(shell pkg-config --libs sdl3) -lGL
 SRC := $(shell find src -type f -name '*.cpp') include/glad/src/glad.c

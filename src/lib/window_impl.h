@@ -10,8 +10,15 @@ public:
   void swapBuffer();
   SDL_Window *window();
   void render();
+  int width();
+  int height();
+  void setSize(int w, int h);
+  void setAspect();
+  float aspect();
+
 private:
   int w;
   int h;
+  float _aspect;
   SDL_Window *sdl_window;
 };
