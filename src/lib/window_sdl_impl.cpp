@@ -40,6 +40,7 @@ bool Window::init() {
     return false;
   }
 
+  SDL_SetWindowRelativeMouseMode(sdl_window, true);
   SDL_GL_SetSwapInterval(1);
 
   return true;

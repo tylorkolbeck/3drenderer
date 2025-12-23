@@ -1,5 +1,6 @@
 #include "camera/camera.h"
 #include "glm/ext/matrix_transform.hpp"
+#include <SDL3/SDL_mouse.h>
 #include <memory>
 #define STB_IMAGE_IMPLEMENTATION
 #include "shader.h"
@@ -36,6 +37,11 @@ Texture *texture1 = nullptr;
 Texture *texture2 = nullptr;
 std::unique_ptr<Window> window;
 std::unique_ptr<Camera> camera;
+
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
+
+float lastX = 0, lastY = 0;
 
 bool showDemo = true;
 
@@ -144,16 +150,21 @@ bool setup(void) {
 
 void update(void) {
   if (input.w)
-    camera->forward();
+    camera->forward(deltaTime);
   if (input.s)
-    camera->back();
+    camera->back(deltaTime);
   if (input.a)
-    camera->left();
+    camera->left(deltaTime);
   if (input.d)
-    camera->right();
+    camera->right(deltaTime);
 }
 
 void process_input(void) {
+  // TODO: future implementation
+  // if (camera) camera->onEvent(e);
+  //   if (ui) ui->onEvent(e);
+  //   if (window) window->onEvent(e);
+
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     // Let IMGUI HANDLE THE EVENT AS WELL
@@ -177,14 +188,14 @@ void process_input(void) {
         running = false;
       }
       if (event.key.key == SDLK_M) {
-          if (display_mode == 0) {
-            display_mode = 1;
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-          } else {
-            display_mode = 0;
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-          }
+        if (display_mode == 0) {
+          display_mode = 1;
+          glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        } else {
+          display_mode = 0;
+          glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         }
+      }
       break;
 
     case SDL_EVENT_KEY_UP:
@@ -197,78 +208,87 @@ void process_input(void) {
       if (event.key.key == SDLK_D)
         input.d = false;
       break;
-      case SDL_EVENT_WINDOW_RESIZED:
-        int w, h;
-        SDL_GetWindowSize(window->handle(), &w, &h);
-        window->setSize(w, h);
-        glViewport(0, 0, window->width(), window->height());
-        std::printf("WINDOW RESIZE EVENT %i, %i\n", w, h);
-        break;
-      }
+    case SDL_EVENT_MOUSE_MOTION:
+      camera->look((float)event.motion.xrel, (float)event.motion.yrel);
+      break;
+    case SDL_EVENT_WINDOW_RESIZED:
+      int w, h;
+      SDL_GetWindowSize(window->handle(), &w, &h);
+      window->setSize(w, h);
+      glViewport(0, 0, window->width(), window->height());
+      std::printf("WINDOW RESIZE EVENT %i, %i\n", w, h);
+      break;
     }
   }
+}
 
-  void render(void) {
-    glClearColor(0.129f, 0.129f, 0.129f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    // START IMGUI FRAME
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplSDL3_NewFrame();
-    ImGui::NewFrame();
-    ImGui::ShowDemoWindow(&showDemo);
+void render(void) {
+  SDL_HideCursor();
+  glClearColor(0.129f, 0.129f, 0.129f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  // START IMGUI FRAME
+  ImGui_ImplOpenGL3_NewFrame();
+  ImGui_ImplSDL3_NewFrame();
+  ImGui::NewFrame();
+  ImGui::ShowDemoWindow(&showDemo);
 
-    shader->use();
-    shader->setInt("texture1", 0);
-    shader->setInt("texture2", 1);
+  shader->use();
+  shader->setInt("texture1", 0);
+  shader->setInt("texture2", 1);
 
-    texture1->bind();
-    texture2->bind();
+  texture1->bind();
+  texture2->bind();
 
-    glm::mat4 proj =
-        glm::perspective(glm::radians(fov), window->aspect(), 0.1f, 100.0f);
+  glm::mat4 proj =
+      glm::perspective(glm::radians(fov), window->aspect(), 0.1f, 100.0f);
 
-    shader->setMat4("view", camera->view());
-    shader->setMat4("proj", proj);
+  shader->setMat4("view", camera->view());
+  shader->setMat4("proj", proj);
 
-    glBindVertexArray(VAO);
-    for (unsigned int i = 0; i < 10; i++) {
-      glm::mat4 model = glm::mat4(1.0f);
-      model = glm::translate(model, cubePositions[i]);
-      float angle = window->time() * 5 * i;
-      model =
-          glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-      shader->setMat4("model", model);
-      glDrawArrays(GL_TRIANGLES, 0, 36);
-    }
-
-    // RENDER IMGUI FRAME
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-    // SWAP THE FRONT AND BACK BUFFER
-    SDL_GL_SwapWindow(window->handle());
+  glBindVertexArray(VAO);
+  for (unsigned int i = 0; i < 10; i++) {
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, cubePositions[i]);
+    float angle = window->time() * 5 * i;
+    model =
+        glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+    shader->setMat4("model", model);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
   }
-  int main(void) {
-    window = std::make_unique<Window>();
-    camera = std::make_unique<Camera>(glm::vec3(0.0f, 0.0f, 3.0f),
-                                      glm::vec3(0.0f, 0.0f, -1.0f));
 
-    if (!window->init()) {
-      return 1;
-    }
+  // RENDER IMGUI FRAME
+  ImGui::Render();
+  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    setup();
+  // SWAP THE FRONT AND BACK BUFFER
+  SDL_GL_SwapWindow(window->handle());
+}
+int main(void) {
+  window = std::make_unique<Window>();
+  camera = std::make_unique<Camera>(glm::vec3(0.0f, 0.0f, 3.0f),
+                                    glm::vec3(0.0f, 0.0f, -1.0f));
 
-    while (running) {
-      process_input();
-      update();
-      render();
-    }
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplSDL3_Shutdown();
-    ImGui::DestroyContext();
-
-    SDL_Quit();
-
-    return 0;
+  if (!window->init()) {
+    return 1;
   }
+
+  setup();
+
+  while (running) {
+    float currentFrame = SDL_GetPerformanceCounter();
+    process_input();
+    update();
+    render();
+
+    deltaTime =
+        (double)(currentFrame - lastFrame) / SDL_GetPerformanceFrequency();
+    lastFrame = currentFrame;
+  }
+  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplSDL3_Shutdown();
+  ImGui::DestroyContext();
+
+  SDL_Quit();
+
+  return 0;
+}

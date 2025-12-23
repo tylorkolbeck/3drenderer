@@ -15,12 +15,13 @@ public:
   glm::mat4 view();
   void set_speed(float value);
   void set_direction(glm::vec3 value);
+  void look(float x, float y);
 
   // Movement
-  void forward();
-  void back();
-  void left();
-  void right();
+  void forward(float dt);
+  void back(float dt);
+  void left(float dt);
+  void right(float dt);
 
 private:
   glm::vec3 pos_;
@@ -28,6 +29,10 @@ private:
   glm::vec3 up_;
   glm::mat4 view_;
   glm::vec3 direction_;
+  bool firstMouse;
   float camera_speed;
+  float sensitivity;
+  float yaw;
+  float pitch;
   void set_view();
 };
