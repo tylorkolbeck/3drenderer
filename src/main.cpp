@@ -1,6 +1,7 @@
 #include "glm/ext/matrix_transform.hpp"
 #define STB_IMAGE_IMPLEMENTATION
 #include "shader.h"
+#include "random.h"
 #include "texture.h"
 #include "window_impl.h"
 #include <SDL3/SDL.h>
@@ -32,6 +33,9 @@ Texture *texture2 = nullptr;
 
 Window *window = nullptr;
 
+// Fake camera settings
+float fov = 45.0f;
+
 unsigned int VBO, VAO, EBO;
 
 float vertices[] = {
@@ -59,11 +63,17 @@ float vertices[] = {
     0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
     -0.5f, 0.5f,  0.5f,  0.0f, 0.0f, -0.5f, 0.5f,  -0.5f, 0.0f, 1.0f};
 
-unsigned int indices[] = {
-    // note that we start from 0!
-    0, 1, 3, // first triangle
-    1, 2, 3  // second triangle
-};
+glm::vec3 cubePositions[] = {
+    glm::vec3(0.0f, 0.0f, -2.0f),    glm::vec3(2.0f, 5.0f, -15.0f),
+    glm::vec3(-1.5f, -2.2f, -2.5f), glm::vec3(-3.8f, -2.0f, -12.3f),
+    glm::vec3(2.4f, -0.4f, -3.5f),  glm::vec3(-1.7f, 3.0f, -7.5f),
+    glm::vec3(1.3f, -2.0f, -2.5f),  glm::vec3(1.5f, 2.0f, -2.5f),
+    glm::vec3(1.5f, 0.2f, -1.5f),   glm::vec3(-1.3f, 1.0f, -1.5f)};
+// unsigned int indices[] = {
+//     // note that we start from 0!
+//     0, 1, 3, // first triangle
+//     1, 2, 3  // second triangle
+// };
 
 unsigned char *textureData;
 
@@ -153,16 +163,24 @@ void process_input(void) {
       if (event.key.key == SDLK_ESCAPE) {
         running = false;
       } else if (event.key.key == SDLK_M) {
-        if (display_mode == 0)
+        if (display_mode == 0) {
           display_mode = 1;
-        else if (display_mode == 1)
+          glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        } else if (display_mode == 1) {
           display_mode = 0;
+          glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        }
+      } else if (event.key.key == SDLK_P) {
+        fov += 1;
+      } else if (event.key.key == SDLK_O) {
+        fov -= 1;
       }
       break;
     case SDL_EVENT_WINDOW_RESIZED:
       int w, h;
       SDL_GetWindowSize(window->window(), &w, &h);
       window->setSize(w, h);
+      glViewport(0, 0, window->width(), window->height());
       std::printf("WINDOW RESIZE EVENT %i, %i\n", w, h);
       break;
     }
@@ -175,21 +193,8 @@ float getTime() {
 }
 
 void render(void) {
-  glViewport(0, 0, window->width(), window->height());
-
-  if (display_mode == 1)
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-  else
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-  glm::mat4 proj =
-      glm::perspective(glm::radians(45.0f), window->aspect(), 0.1f, 100.0f);
-
-  glm::mat4 model = glm::mat4(1.0f);
-  model = glm::rotate(model, getTime(), glm::vec3(1.0f, 0.5f, 0.5f));
-
-  glm::mat4 view = glm::mat4(1.0f);
-  view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+  glClearColor(0.129f, 0.129f, 0.129f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   shader->use();
   shader->setInt("texture1", 0);
@@ -198,16 +203,26 @@ void render(void) {
   texture1->bind();
   texture2->bind();
 
-  shader->setMat4("model", model);
+  glm::mat4 proj =
+      glm::perspective(glm::radians(fov), window->aspect(), 0.1f, 100.0f);
+
+  glm::mat4 view = glm::mat4(1.0f);
+  view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+
   shader->setMat4("view", view);
   shader->setMat4("proj", proj);
 
-  glClearColor(0.129f, 0.129f, 0.129f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
   glBindVertexArray(VAO);
-  // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-  glDrawArrays(GL_TRIANGLES, 0, 36);
+  for (unsigned int i = 0; i < 10; i++) {
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, cubePositions[i]);
+    float angle = getTime() * 5 * i;
+    model =
+        glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
+    shader->setMat4("model", model);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+  }
+
   window->render();
 }
 int main(void) {
