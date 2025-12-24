@@ -1,4 +1,5 @@
 #include "window_sdl_impl.h"
+#include "shader.h"
 #include <SDL3/SDL_video.h>
 #include <cstdio>
 #include <iostream>
@@ -63,8 +64,16 @@ void Window::setSize(int w, int h) {
   setAspect();
 }
 
-// void Window::destroy() { SDL_DestroyWindow(sdl_window); }
-
+void Window::onEvent(SDL_Event event) {
+  switch (event.type) {
+  case SDL_EVENT_WINDOW_RESIZED:
+    int w, h;
+    SDL_GetWindowSize(handle(), &w, &h);
+    setSize(w, h);
+    glViewport(0, 0, width(), height());
+    break;
+  }
+}
 int Window::width() { return w; }
 
 int Window::height() { return h; }

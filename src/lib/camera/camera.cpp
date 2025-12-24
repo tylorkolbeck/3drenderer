@@ -4,13 +4,13 @@
 #include <SDL3/SDL_events.h>
 #include <iostream>
 
-Camera::Camera(glm::vec3 pos, glm::vec3 direction) {
+Camera::Camera(glm::vec3 pos, glm::vec3 front) {
   up_ = glm::vec3(0.0f, 1.0f, 0.0f);
   front_ = glm::vec3(0.0f, 0.0f, -1.0f);
-  camera_speed = 2.05f;
-  set_direction(direction);
-  set_pos(pos);
-  set_view();
+  baseSpeed = 2.05f;
+  speed = baseSpeed;
+  front_ = front;
+  pos_ = pos;
   sensitivity = 0.1f;
   yaw_ = 0.0f;
   pitch_ = 0.0f;
@@ -19,19 +19,9 @@ Camera::Camera(glm::vec3 pos, glm::vec3 direction) {
 
 Camera::~Camera() { std::cout << "camera instance destroyed" << std::endl; }
 
-void Camera::set_view() { view_ = glm::lookAt(pos_, pos_ + front_, up_); }
-
-void Camera::set_target(glm::vec3 target) { target_ = target; }
-
 glm::mat4 Camera::view() { return view_; }
 
-void Camera::set_pos(glm::vec3 pos) { pos_ = pos; }
-
 glm::vec3 Camera::pos() { return pos_; }
-
-void Camera::set_speed(float value) { camera_speed = value; }
-
-void Camera::set_direction(glm::vec3 value) { front_ = value; }
 
 void Camera::onEvent(SDL_Event event) {
   switch (event.type) {
@@ -49,6 +39,8 @@ void Camera::onEvent(SDL_Event event) {
       input.a = true;
     if (event.key.key == SDLK_D)
       input.d = true;
+    if (event.key.key == SDLK_LSHIFT)
+      input.l_shift = true;
     break;
 
   case SDL_EVENT_KEY_UP:
@@ -60,6 +52,8 @@ void Camera::onEvent(SDL_Event event) {
       input.a = false;
     if (event.key.key == SDLK_D)
       input.d = false;
+    if (event.key.key == SDLK_LSHIFT)
+      input.l_shift = false;
     break;
   }
 }
@@ -83,6 +77,8 @@ void Camera::update(float deltaTime) {
     move_left(deltaTime);
   if (input.d)
     move_right(deltaTime);
+
+  speed = input.l_shift ? baseSpeed * 2 : baseSpeed;
 }
 
 void Camera::look(float x, float y) {
@@ -104,9 +100,7 @@ void Camera::look(float x, float y) {
     yaw_ += 360.0f;
 }
 
-void Camera::move_forward(float dt) { pos_ += front_ * camera_speed * dt; }
-void Camera::move_back(float dt) { set_pos(pos_ - camera_speed * front_ * dt); }
-void Camera::move_left(float dt) {
-  set_pos(pos_ - glm::normalize(glm::cross(front_, up_)) * camera_speed * dt);
-}
-void Camera::move_right(float dt) { pos_ += right_ * camera_speed * dt; }
+void Camera::move_forward(float dt) { pos_ += front_ * speed * dt; }
+void Camera::move_back(float dt) { pos_ -= front_ * speed * dt; }
+void Camera::move_left(float dt) { pos_ -= right_ * speed * dt; }
+void Camera::move_right(float dt) { pos_ += right_ * speed * dt; }

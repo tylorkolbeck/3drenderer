@@ -15,6 +15,7 @@ public:
   float aspect();
   SDL_GLContext glContext();
   float time();
+  void onEvent(SDL_Event event);
 
 private:
   int w;

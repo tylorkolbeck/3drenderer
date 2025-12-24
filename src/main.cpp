@@ -139,21 +139,18 @@ bool setup(void) {
   return true;
 }
 
-void update(void) {
-  camera->update(deltaTime);
-}
+void update(void) { camera->update(deltaTime); }
 
 void process_input(void) {
-  // TODO: future implementation
-  // if (camera) camera->onEvent(e);
-  //   if (ui) ui->onEvent(e);
-  //   if (window) window->onEvent(e);
-
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     // Let IMGUI HANDLE THE EVENT AS WELL
     ImGui_ImplSDL3_ProcessEvent(&event);
-    if (camera) camera->onEvent(event);
+    if (camera)
+      camera->onEvent(event);
+    if (window)
+      window->onEvent(event);
+
     switch (event.type) {
       // System Events
     case SDL_EVENT_QUIT:
@@ -161,25 +158,18 @@ void process_input(void) {
       break;
     case SDL_EVENT_KEY_DOWN:
       if (event.key.key == SDLK_ESCAPE) {
-          running = false;
-        }
-    // TODO: move to window class event handler
-    case SDL_EVENT_WINDOW_RESIZED:
-      int w, h;
-      SDL_GetWindowSize(window->handle(), &w, &h);
-      window->setSize(w, h);
-      glViewport(0, 0, window->width(), window->height());
-      std::printf("WINDOW RESIZE EVENT %i, %i\n", w, h);
-      break;
+        running = false;
+      }
       if (event.key.key == SDLK_M) {
         if (display_mode == 0) {
           display_mode = 1;
           glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         } else {
           display_mode = 0;
-          glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+          glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         }
       }
+      break;
     }
   }
 }
