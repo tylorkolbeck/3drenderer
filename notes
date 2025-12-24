@@ -12,8 +12,37 @@ Generate compile commands:
 bear -- make clean build
 
 
+Application
+└── Engine
+    ├── Window
+    ├── Renderer
+    │   ├── ShaderManager
+    │   ├── TextureManager
+    │   └── MeshManager
+    ├── InputSystem
+    ├── Camera
+    ├── Scene
+    │   ├── Entity(s)
+    │   │   ├── Transform
+    │   │   ├── Mesh
+    │   │   └── Material
+    │   └── Lights
+    ├── UI (ImGui)
+    └── Time
 
+Ownership vs Access (VERY important distinction)
+Relationship	Meaning
+Owns			Responsible for lifetime (unique_ptr)
+Uses			Temporary access (reference or raw pointer)
+Observes		Non-owning, optional (weak_ptr or raw pointer)
 
+class Engine {
+  std::unique_ptr<Window> window;
+  std::unique_ptr<Renderer> renderer;
+  std::unique_ptr<InputSystem> input;
+  std::unique_ptr<Camera> camera;
+  std::unique_ptr<Scene> scene;
+};
 
 This is an **excellent question** — and the fact you’re asking it means you’re already thinking like a systems programmer.
 

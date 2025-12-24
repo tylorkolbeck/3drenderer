@@ -5,22 +5,22 @@ class Window {
 public:
   Window();
   ~Window();
-  bool init();
-  void destroy();
-  SDL_Window *handle();
-  int width();
-  int height();
-  void setSize(int w, int h);
-  void setAspect();
-  float aspect();
+  bool Init();
+  SDL_Window *Handle();
+  int Width();
+  int Height();
+  float Aspect();
   SDL_GLContext glContext();
-  float time();
-  void onEvent(SDL_Event event);
+  float Time();
+  void OnEvent(SDL_Event event);
+  void Quit();
 
 private:
   int w;
   int h;
-  float _aspect;
+  float aspect;
   SDL_GLContext sdl_ctx;
   SDL_Window *sdl_window = nullptr;
+  void setSize(int w, int h);
+  void setAspect();
 };

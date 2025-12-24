@@ -1,155 +1,52 @@
-#include "camera/camera.h"
-#include "glm/ext/matrix_transform.hpp"
-#include <SDL3/SDL_mouse.h>
-#include <memory>
 #define STB_IMAGE_IMPLEMENTATION
+#include "camera/camera.h"
+#include "renderer/renderer.h"
 #include "shader.h"
-#include "texture.h"
 #include "window_sdl_impl.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_keycode.h>
+#include <SDL3/SDL_mouse.h>
 #include <SDL3/SDL_oldnames.h>
 #include <SDL3/SDL_render.h>
 #include <SDL3/SDL_timer.h>
 #include <SDL3/SDL_video.h>
 #include <backends/imgui_impl_opengl3.h>
 #include <backends/imgui_impl_sdl3.h>
-#include <cstdio>
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
+#include <memory>
 #include <stdbool.h>
 
-void compileShaders();
-void linkShaders();
-
-// static SDL_Window *window = NULL;
 static bool running = true;
 static int display_mode = 0;
-
-Shader *shader = nullptr;
-Texture *texture1 = nullptr;
-Texture *texture2 = nullptr;
 std::unique_ptr<Window> window;
 std::unique_ptr<Camera> camera;
-
+std::unique_ptr<Renderer> renderer;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
-float lastX = 0, lastY = 0;
-
-bool showDemo = true;
-
-// Fake camera settings
+// camera settings
 float fov = 45.0f;
+float nearZ = 0.1f;
+float farZ = 100.0f;
 
-unsigned int VBO, VAO, EBO;
-
-float vertices[] = {
-    -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, 0.5f,  -0.5f, -0.5f, 1.0f, 0.0f,
-    0.5f,  0.5f,  -0.5f, 1.0f, 1.0f, 0.5f,  0.5f,  -0.5f, 1.0f, 1.0f,
-    -0.5f, 0.5f,  -0.5f, 0.0f, 1.0f, -0.5f, -0.5f, -0.5f, 0.0f, 0.0f,
-
-    -0.5f, -0.5f, 0.5f,  0.0f, 0.0f, 0.5f,  -0.5f, 0.5f,  1.0f, 0.0f,
-    0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-    -0.5f, 0.5f,  0.5f,  0.0f, 1.0f, -0.5f, -0.5f, 0.5f,  0.0f, 0.0f,
-
-    -0.5f, 0.5f,  0.5f,  1.0f, 0.0f, -0.5f, 0.5f,  -0.5f, 1.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-    -0.5f, -0.5f, 0.5f,  0.0f, 0.0f, -0.5f, 0.5f,  0.5f,  1.0f, 0.0f,
-
-    0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.5f,  0.5f,  -0.5f, 1.0f, 1.0f,
-    0.5f,  -0.5f, -0.5f, 0.0f, 1.0f, 0.5f,  -0.5f, -0.5f, 0.0f, 1.0f,
-    0.5f,  -0.5f, 0.5f,  0.0f, 0.0f, 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-    -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, 0.5f,  -0.5f, -0.5f, 1.0f, 1.0f,
-    0.5f,  -0.5f, 0.5f,  1.0f, 0.0f, 0.5f,  -0.5f, 0.5f,  1.0f, 0.0f,
-    -0.5f, -0.5f, 0.5f,  0.0f, 0.0f, -0.5f, -0.5f, -0.5f, 0.0f, 1.0f,
-
-    -0.5f, 0.5f,  -0.5f, 0.0f, 1.0f, 0.5f,  0.5f,  -0.5f, 1.0f, 1.0f,
-    0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f, 0.5f,  0.5f,  0.0f, 0.0f, -0.5f, 0.5f,  -0.5f, 0.0f, 1.0f};
-
-glm::vec3 cubePositions[] = {
-    glm::vec3(0.0f, 0.0f, -2.0f),   glm::vec3(2.0f, 5.0f, -15.0f),
-    glm::vec3(-1.5f, -2.2f, -2.5f), glm::vec3(-3.8f, -2.0f, -12.3f),
-    glm::vec3(2.4f, -0.4f, -3.5f),  glm::vec3(-1.7f, 3.0f, -7.5f),
-    glm::vec3(1.3f, -2.0f, -2.5f),  glm::vec3(1.5f, 2.0f, -2.5f),
-    glm::vec3(1.5f, 0.2f, -1.5f),   glm::vec3(-1.3f, 1.0f, -1.5f)};
-
-unsigned char *textureData;
-
-bool setup(void) {
-  // Load OpenGL function pointers using SDL's loader
-  if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
-    std::fprintf(stderr, "gladLoadGL failed\n");
-    SDL_Quit();
-    return 1;
-  }
-
-  IMGUI_CHECKVERSION();
-  ImGui::CreateContext();
-  ImGui::StyleColorsDark();
-
-  ImGui_ImplSDL3_InitForOpenGL(window->handle(), window->glContext());
-  ImGui_ImplOpenGL3_Init("#version 330");
-
-  glEnable(GL_DEPTH_TEST);
-
-  // Shader setup
-  shader =
-      new Shader("assets/shaders/vertex.glsl", "assets/shaders/fragment.glsl");
-  texture1 = new Texture("assets/textures/container.jpg");
-  texture1->init();
-  texture2 = new Texture("assets/textures/awesomeface.png");
-  texture2->init();
-
-  glGenVertexArrays(1, &VAO);
-  glGenBuffers(1, &VBO);
-  glGenBuffers(1, &EBO);
-
-  // bind the VAO first
-  glBindVertexArray(VAO);
-
-  glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-  // Vertice mapping
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
-  glEnableVertexAttribArray(0);
-
-  // Color mapping
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                        (void *)(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-
-  // unbind the VBO and VAO
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  glBindVertexArray(0);
-
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA,
-              GL_ONE_MINUS_SRC_ALPHA); // Common for standard alpha blending
-
-  return true;
-}
-
-void update(void) { camera->update(deltaTime); }
+void update(void) { camera->Update(deltaTime); }
 
 void process_input(void) {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     // Let IMGUI HANDLE THE EVENT AS WELL
-    ImGui_ImplSDL3_ProcessEvent(&event);
+    // ImGui_ImplSDL3_ProcessEvent(&event);
     if (camera)
-      camera->onEvent(event);
+      camera->OnEvent(event);
     if (window)
-      window->onEvent(event);
+      window->OnEvent(event);
 
     switch (event.type) {
       // System Events
@@ -170,77 +67,31 @@ void process_input(void) {
         }
       }
       break;
+    case SDL_EVENT_WINDOW_RESIZED:
+        camera->SetPerspective(window->Aspect());
+      break;
     }
   }
 }
 
-void render(void) {
-  SDL_HideCursor();
-  glClearColor(0.129f, 0.129f, 0.129f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  // START IMGUI FRAME
-  ImGui_ImplOpenGL3_NewFrame();
-  ImGui_ImplSDL3_NewFrame();
-  ImGui::NewFrame();
-  ImGui::ShowDemoWindow(&showDemo);
-
-  shader->use();
-  shader->setInt("texture1", 0);
-  shader->setInt("texture2", 1);
-
-  texture1->bind();
-  texture2->bind();
-
-  glm::mat4 proj =
-      glm::perspective(glm::radians(fov), window->aspect(), 0.1f, 100.0f);
-
-  shader->setMat4("view", camera->view());
-  shader->setMat4("proj", proj);
-
-  glBindVertexArray(VAO);
-  for (unsigned int i = 0; i < 10; i++) {
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, cubePositions[i]);
-    float angle = window->time() * 5 * i;
-    model =
-        glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-    shader->setMat4("model", model);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-  }
-
-  // RENDER IMGUI FRAME
-  ImGui::Render();
-  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-  // SWAP THE FRONT AND BACK BUFFER
-  SDL_GL_SwapWindow(window->handle());
-}
 int main(void) {
   window = std::make_unique<Window>();
-  camera = std::make_unique<Camera>(glm::vec3(0.0f, 0.0f, 3.0f),
-                                    glm::vec3(0.0f, 0.0f, -1.0f));
-
-  if (!window->init()) {
+  camera = std::make_unique<Camera>(45.0f, 0.1f, 100.f);
+  renderer = std::make_unique<Renderer>();
+  if (!window->Init() || !renderer->Init()) {
     return 1;
   }
-
-  setup();
 
   while (running) {
     float currentFrame = SDL_GetPerformanceCounter();
     process_input();
     update();
-    render();
-
+    renderer->Render(*camera);
+    SDL_GL_SwapWindow(window->Handle());
     deltaTime =
         (double)(currentFrame - lastFrame) / SDL_GetPerformanceFrequency();
     lastFrame = currentFrame;
   }
-  ImGui_ImplOpenGL3_Shutdown();
-  ImGui_ImplSDL3_Shutdown();
-  ImGui::DestroyContext();
-
-  SDL_Quit();
 
   return 0;
 }

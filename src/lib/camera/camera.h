@@ -14,36 +14,45 @@ struct InputState {
 
 class Camera {
 public:
-  Camera(glm::vec3 location, glm::vec3 target);
+  Camera(float fov, float nearZ, float farZ);
   ~Camera();
 
   // getters
-  glm::vec3 pos();
-  glm::vec3 target();
-  glm::mat4 view();
+  glm::vec3 Pos();
+  glm::vec3 Target();
+  const glm::mat4 View();
 
   // Movement
-  void move_forward(float dt);
-  void move_back(float dt);
-  void move_left(float dt);
-  void move_right(float dt);
-
-  void update(float deltaTime);
-  void onEvent(SDL_Event event);
+  void MoveForward(float dt);
+  void MoveBack(float dt);
+  void MoveLeft(float dt);
+  void MoveRight(float dt);
+  void Update(float deltaTime);
+  void OnEvent(SDL_Event event);
+  void SetPerspective(float aspect);
+  const glm::mat4 &Projection() const { return proj; };
+  const glm::mat4 &View() const { return view; };
 
 private:
   void look(float x, float y);
-  glm::vec3 pos_;
-  glm::vec3 target_;
-  glm::vec3 up_;
-  glm::mat4 view_;
-  glm::vec3 front_;
-  glm::vec3 right_;
+  glm::vec3 pos;
+  glm::vec3 target;
+  glm::vec3 up;
+  glm::mat4 view;
+  glm::vec3 front;
+  glm::vec3 right;
   InputState input;
+  glm::mat4 proj;
   bool firstMouse;
   float baseSpeed;
   float speed;
   float sensitivity;
-  float yaw_;
-  float pitch_;
+  float yaw;
+  float pitch;
+
+  // perspective members
+  float fov;
+  float aspect;
+  float near;
+  float far;
 };

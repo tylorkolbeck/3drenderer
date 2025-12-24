@@ -1,29 +1,39 @@
 #include "camera.h"
+#include "glm/ext/matrix_clip_space.hpp"
 #include "glm/ext/matrix_float4x4.hpp"
 #include "glm/ext/matrix_transform.hpp"
 #include <SDL3/SDL_events.h>
 #include <iostream>
 
-Camera::Camera(glm::vec3 pos, glm::vec3 front) {
-  up_ = glm::vec3(0.0f, 1.0f, 0.0f);
-  front_ = glm::vec3(0.0f, 0.0f, -1.0f);
+Camera::Camera(float fov, float nearZ, float farZ) {
+  up = glm::vec3(0.0f, 1.0f, 0.0f);
   baseSpeed = 2.05f;
   speed = baseSpeed;
-  front_ = front;
-  pos_ = pos;
+  this->front = glm::vec3(0.0f, 0.0f, -1.0f);
+  this->pos = glm::vec3(0.0f, 0.0f, 3.0f);
   sensitivity = 0.1f;
-  yaw_ = 0.0f;
-  pitch_ = 0.0f;
+  yaw = 0.0f;
+  pitch = 0.0f;
   firstMouse = true;
+  this->fov = fov;
+  near = nearZ;
+  far = farZ;
+}
+
+void Camera::SetPerspective(float a) {
+  aspect = a;
+  std::cout << "setting perspective\n";
+
+  proj = glm::perspective(glm::radians(fov), aspect, near, far);
 }
 
 Camera::~Camera() { std::cout << "camera instance destroyed" << std::endl; }
 
-glm::mat4 Camera::view() { return view_; }
+const glm::mat4 Camera::View() { return view; }
 
-glm::vec3 Camera::pos() { return pos_; }
+glm::vec3 Camera::Pos() { return pos; }
 
-void Camera::onEvent(SDL_Event event) {
+void Camera::OnEvent(SDL_Event event) {
   switch (event.type) {
   case SDL_EVENT_MOUSE_MOTION:
     look((float)event.motion.xrel, (float)event.motion.yrel);
@@ -58,25 +68,25 @@ void Camera::onEvent(SDL_Event event) {
   }
 }
 
-void Camera::update(float deltaTime) {
+void Camera::Update(float deltaTime) {
   glm::vec3 f;
-  f.x = cos(glm::radians(yaw_)) * cos(glm::radians(pitch_));
-  f.y = sin(glm::radians(pitch_));
-  f.z = sin(glm::radians(yaw_)) * cos(glm::radians(pitch_));
-  front_ = glm::normalize(f);
+  f.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+  f.y = sin(glm::radians(pitch));
+  f.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+  front = glm::normalize(f);
 
-  right_ = glm::normalize(glm::cross(front_, up_));
-  up_ = glm::normalize(glm::cross(right_, front_));
-  view_ = glm::lookAt(pos_, pos_ + front_, up_);
+  right = glm::normalize(glm::cross(front, up));
+  up = glm::normalize(glm::cross(right, front));
+  view = glm::lookAt(pos, pos + front, up);
 
   if (input.w)
-    move_forward(deltaTime);
+    MoveForward(deltaTime);
   if (input.s)
-    move_back(deltaTime);
+    MoveBack(deltaTime);
   if (input.a)
-    move_left(deltaTime);
+    MoveLeft(deltaTime);
   if (input.d)
-    move_right(deltaTime);
+    MoveRight(deltaTime);
 
   speed = input.l_shift ? baseSpeed * 2 : baseSpeed;
 }
@@ -86,21 +96,21 @@ void Camera::look(float x, float y) {
     firstMouse = false;
     return;
   }
-  yaw_ += x * sensitivity;
-  pitch_ -= y * sensitivity;
+  yaw += x * sensitivity;
+  pitch -= y * sensitivity;
 
-  if (pitch_ > 89.0f)
-    pitch_ = 89.0f;
-  if (pitch_ < -89.0f)
-    pitch_ = -89.0f;
+  if (pitch > 89.0f)
+    pitch = 89.0f;
+  if (pitch < -89.0f)
+    pitch = -89.0f;
 
-  if (yaw_ >= 360.0f)
-    yaw_ -= 360.0f;
-  if (yaw_ < 0.0f)
-    yaw_ += 360.0f;
+  if (yaw >= 360.0f)
+    yaw -= 360.0f;
+  if (yaw < 0.0f)
+    yaw += 360.0f;
 }
 
-void Camera::move_forward(float dt) { pos_ += front_ * speed * dt; }
-void Camera::move_back(float dt) { pos_ -= front_ * speed * dt; }
-void Camera::move_left(float dt) { pos_ -= right_ * speed * dt; }
-void Camera::move_right(float dt) { pos_ += right_ * speed * dt; }
+void Camera::MoveForward(float dt) { pos += front * speed * dt; }
+void Camera::MoveBack(float dt) { pos -= front * speed * dt; }
+void Camera::MoveLeft(float dt) { pos -= right * speed * dt; }
+void Camera::MoveRight(float dt) { pos += right * speed * dt; }
