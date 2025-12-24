@@ -69,6 +69,10 @@ void Window::setSize(int w, int h) {
   setAspect();
 }
 
+void Window::SwapBuffers() {
+  SDL_GL_SwapWindow(sdl_window);
+}
+
 void Window::OnEvent(SDL_Event event) {
   switch (event.type) {
   case SDL_EVENT_WINDOW_RESIZED:

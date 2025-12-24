@@ -14,6 +14,7 @@ public:
   float Time();
   void OnEvent(SDL_Event event);
   void Quit();
+  void SwapBuffers();
 
 private:
   int w;

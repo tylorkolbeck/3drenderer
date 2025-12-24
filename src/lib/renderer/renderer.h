@@ -9,8 +9,12 @@ public:
   ~Renderer();
   bool Init();
   void Render(const Camera& camera);
+  void OnEvent(SDL_Event event);
+  void BeginFrame();
+  void EndFrame();
 
 private:
   std::unique_ptr<Shader> shader;
   void setup();
+  int displayMode = 0;
 }; 

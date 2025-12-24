@@ -39,14 +39,11 @@ glm::vec3 cubePositions[] = {
     glm::vec3(1.3f, -2.0f, -2.5f),  glm::vec3(1.5f, 2.0f, -2.5f),
     glm::vec3(1.5f, 0.2f, -1.5f),   glm::vec3(-1.3f, 1.0f, -1.5f)};
 unsigned int VBO, VAO, EBO;
-Renderer::Renderer()  {  }
+Renderer::Renderer() {}
 
 Renderer::~Renderer() { std::cout << "renderer destroyed\n"; }
 
-void Renderer::Render(const Camera& camera) {
-  glClearColor(0.129f, 0.129f, 0.129f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+void Renderer::Render(const Camera &camera) {
   shader->use();
 
   shader->setInt("texture1", 0);
@@ -68,6 +65,34 @@ void Renderer::Render(const Camera& camera) {
   }
 }
 
+void Renderer::BeginFrame() {
+  glEnable(GL_DEPTH_TEST);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+  glClearColor(0.129f, 0.129f, 0.129f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+void Renderer::EndFrame() {}
+
+void Renderer::OnEvent(SDL_Event event) {
+  switch (event.type) {
+  case SDL_EVENT_KEY_DOWN:
+    if (event.key.key == SDLK_M) {
+      if (displayMode == 0) {
+        displayMode = 1;
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+      } else {
+        displayMode = 0;
+
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+      }
+    }
+    break;
+  }
+}
+
 void Renderer::setup() {}
 
 bool Renderer::Init() {
@@ -77,7 +102,6 @@ bool Renderer::Init() {
     return false;
   }
 
-  glEnable(GL_DEPTH_TEST);
   shader = std::make_unique<Shader>("assets/shaders/vertex.glsl",
                                     "assets/shaders/fragment.glsl");
 
@@ -108,8 +132,6 @@ bool Renderer::Init() {
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   glBindVertexArray(0);
 
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   return true;
 }
