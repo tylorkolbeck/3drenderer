@@ -2,6 +2,14 @@
 
 #include "glm/ext/matrix_float4x4.hpp"
 #include "glm/ext/vector_float3.hpp"
+#include <SDL3/SDL_events.h>
+
+struct InputState {
+  bool w = false;
+  bool a = false;
+  bool s = false;
+  bool d = false;
+};
 
 class Camera {
 public:
@@ -18,21 +26,26 @@ public:
   void look(float x, float y);
 
   // Movement
-  void forward(float dt);
-  void back(float dt);
-  void left(float dt);
-  void right(float dt);
+  void move_forward(float dt);
+  void move_back(float dt);
+  void move_left(float dt);
+  void move_right(float dt);
+
+  void update(float deltaTime);
+  void onEvent(SDL_Event event);
 
 private:
   glm::vec3 pos_;
   glm::vec3 target_;
   glm::vec3 up_;
   glm::mat4 view_;
-  glm::vec3 direction_;
+  glm::vec3 front_;
+  glm::vec3 right_;
+  InputState input;
   bool firstMouse;
   float camera_speed;
   float sensitivity;
-  float yaw;
-  float pitch;
+  float yaw_;
+  float pitch_;
   void set_view();
 };

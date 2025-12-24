@@ -45,15 +45,6 @@ float lastX = 0, lastY = 0;
 
 bool showDemo = true;
 
-struct InputState {
-  bool w = false;
-  bool a = false;
-  bool s = false;
-  bool d = false;
-};
-
-InputState input;
-
 // Fake camera settings
 float fov = 45.0f;
 
@@ -149,14 +140,7 @@ bool setup(void) {
 }
 
 void update(void) {
-  if (input.w)
-    camera->forward(deltaTime);
-  if (input.s)
-    camera->back(deltaTime);
-  if (input.a)
-    camera->left(deltaTime);
-  if (input.d)
-    camera->right(deltaTime);
+  camera->update(deltaTime);
 }
 
 void process_input(void) {
@@ -169,24 +153,24 @@ void process_input(void) {
   while (SDL_PollEvent(&event)) {
     // Let IMGUI HANDLE THE EVENT AS WELL
     ImGui_ImplSDL3_ProcessEvent(&event);
+    if (camera) camera->onEvent(event);
     switch (event.type) {
+      // System Events
     case SDL_EVENT_QUIT:
       running = false;
       break;
     case SDL_EVENT_KEY_DOWN:
-      if (event.key.repeat)
-        break; // optional: ignore OS repeat
-      if (event.key.key == SDLK_W)
-        input.w = true;
-      if (event.key.key == SDLK_S)
-        input.s = true;
-      if (event.key.key == SDLK_A)
-        input.a = true;
-      if (event.key.key == SDLK_D)
-        input.d = true;
       if (event.key.key == SDLK_ESCAPE) {
-        running = false;
-      }
+          running = false;
+        }
+    // TODO: move to window class event handler
+    case SDL_EVENT_WINDOW_RESIZED:
+      int w, h;
+      SDL_GetWindowSize(window->handle(), &w, &h);
+      window->setSize(w, h);
+      glViewport(0, 0, window->width(), window->height());
+      std::printf("WINDOW RESIZE EVENT %i, %i\n", w, h);
+      break;
       if (event.key.key == SDLK_M) {
         if (display_mode == 0) {
           display_mode = 1;
@@ -196,28 +180,6 @@ void process_input(void) {
           glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         }
       }
-      break;
-
-    case SDL_EVENT_KEY_UP:
-      if (event.key.key == SDLK_W)
-        input.w = false;
-      if (event.key.key == SDLK_S)
-        input.s = false;
-      if (event.key.key == SDLK_A)
-        input.a = false;
-      if (event.key.key == SDLK_D)
-        input.d = false;
-      break;
-    case SDL_EVENT_MOUSE_MOTION:
-      camera->look((float)event.motion.xrel, (float)event.motion.yrel);
-      break;
-    case SDL_EVENT_WINDOW_RESIZED:
-      int w, h;
-      SDL_GetWindowSize(window->handle(), &w, &h);
-      window->setSize(w, h);
-      glViewport(0, 0, window->width(), window->height());
-      std::printf("WINDOW RESIZE EVENT %i, %i\n", w, h);
-      break;
     }
   }
 }
