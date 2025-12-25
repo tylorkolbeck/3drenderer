@@ -18,9 +18,9 @@ public:
   ~Camera();
 
   // getters
-  glm::vec3 Pos();
+  glm::vec3 Position();
   glm::vec3 Target();
-  const glm::mat4 View();
+  // const glm::mat4 ViewMatrix();
 
   // Movement
   void MoveForward(float dt);
@@ -29,15 +29,17 @@ public:
   void MoveRight(float dt);
   void Update(float deltaTime);
   void OnEvent(SDL_Event event);
-  void SetPerspective(float aspect);
+  void SetAspect(float aspect);
+  void UpdatePerspective();
+  void IncrementFov(int value);
   const glm::mat4 &Projection() const { return proj; };
-  const glm::mat4 &View() const { return view; };
+  const glm::mat4 &ViewMatrix() const { return view; };
 
 private:
   void look(float x, float y);
   glm::vec3 pos;
   glm::vec3 target;
-  glm::vec3 up;
+  glm::vec3 worldUp;
   glm::mat4 view;
   glm::vec3 front;
   glm::vec3 right;

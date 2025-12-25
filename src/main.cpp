@@ -44,7 +44,7 @@ void process_input(void) {
       }
       break;
     case SDL_EVENT_WINDOW_RESIZED:
-      cameraPerspective->SetPerspective(window->Aspect());
+      cameraPerspective->SetAspect(window->Aspect());
       break;
     }
   }
@@ -70,7 +70,7 @@ int main(void) {
 
     cameraPerspective->Update(dt);
     renderer->BeginFrame();
-    renderer->Render(*cameraPerspective);
+    renderer->RenderFrame(*cameraPerspective);
     renderer->EndFrame();
 
     window->SwapBuffers();

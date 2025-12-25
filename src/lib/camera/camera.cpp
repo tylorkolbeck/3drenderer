@@ -5,38 +5,50 @@
 #include <SDL3/SDL_events.h>
 #include <iostream>
 
-Camera::Camera(float fov, float nearZ, float farZ) {
-  up = glm::vec3(0.0f, 1.0f, 0.0f);
+Camera::Camera(float f, float nearZ, float farZ) {
+  worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
   baseSpeed = 2.05f;
   speed = baseSpeed;
-  this->front = glm::vec3(0.0f, 0.0f, -1.0f);
-  this->pos = glm::vec3(0.0f, 0.0f, 3.0f);
+  front = glm::vec3(0.0f, 0.0f, -1.0f);
+  pos = glm::vec3(0.0f, 0.0f, 10.0f);
   sensitivity = 0.1f;
-  yaw = 0.0f;
+  yaw = -90.0f;
   pitch = 0.0f;
   firstMouse = true;
-  this->fov = fov;
+  fov = f;
   near = nearZ;
   far = farZ;
 }
 
-void Camera::SetPerspective(float a) {
+void Camera::SetAspect(float a) {
   aspect = a;
-  std::cout << "setting perspective\n";
+  UpdatePerspective(); 
+}
 
+void Camera::UpdatePerspective() {
   proj = glm::perspective(glm::radians(fov), aspect, near, far);
+}
+
+void Camera::IncrementFov(int value) {
+  fov -= value;
+  if (fov < 1.0f) fov = 1.0f;
+  if (fov > 45.0f) fov = 45.0f;
+  UpdatePerspective();
 }
 
 Camera::~Camera() { std::cout << "camera instance destroyed" << std::endl; }
 
-const glm::mat4 Camera::View() { return view; }
+// const glm::mat4 Camera::ViewMatrix() const { return view; }
 
-glm::vec3 Camera::Pos() { return pos; }
+glm::vec3 Camera::Position() { return pos; }
 
 void Camera::OnEvent(SDL_Event event) {
   switch (event.type) {
   case SDL_EVENT_MOUSE_MOTION:
     look((float)event.motion.xrel, (float)event.motion.yrel);
+    break;
+  case SDL_EVENT_MOUSE_WHEEL:
+      IncrementFov(event.wheel.integer_y);
     break;
   case SDL_EVENT_KEY_DOWN:
     if (event.key.repeat)
@@ -69,15 +81,13 @@ void Camera::OnEvent(SDL_Event event) {
 }
 
 void Camera::Update(float deltaTime) {
-  glm::vec3 f;
-  f.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-  f.y = sin(glm::radians(pitch));
-  f.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-  front = glm::normalize(f);
-
-  right = glm::normalize(glm::cross(front, up));
-  up = glm::normalize(glm::cross(right, front));
-  view = glm::lookAt(pos, pos + front, up);
+  front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+  front.y = sin(glm::radians(pitch));
+  front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+  front = glm::normalize(front);
+  right = glm::normalize(glm::cross(front, worldUp));
+  worldUp = glm::normalize(glm::cross(right, front));
+  view = glm::lookAt(pos, pos + front, worldUp);
 
   if (input.w)
     MoveForward(deltaTime);
